@@ -1,0 +1,31 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+
+# Data and model files
+*.h5
+*.pkl
+*.safetensors
+*.ckpt
+*.pth
+*.pt
+
+# Temporary files
+temp.jpg
+*.log
+*.tmp
+*.temp
+
+# IDE/editor metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/

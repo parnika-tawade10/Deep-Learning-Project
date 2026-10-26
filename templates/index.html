@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DL Experiment Project</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * { font-family: 'Poppins', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 25%, #3730a3 50%, #1e40af 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+        }
+        
+        .model-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 28px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 28px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-secondary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .upload-area.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            display: none;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .preview-image.visible {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .result-box {
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .result-box.visible {
+            display: block;
+            animation: slideUp 0.5s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99, 102, 241, 0.3);
+        }
+        
+        .nav-item i {
+            width: 24px;
+        }
+        
+        input[type="text"], textarea {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: white;
+            width: 100%;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        ::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Loader Overlay -->
+    <div id="loader" class="fixed inset-0 bg-black bg-opacity-80 hidden flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loader"></div>
+            <p class="mt-3 text-indigo-400">Processing...</p>
+        </div>
+    </div>
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <div class="w-72 glass-card p-6 m-4">
+            <h1 class="text-2xl font-bold text-center mb-2">
+                <i class="fas fa-brain text-indigo-400"></i> DL Experiment Project
+            </h1>
+            <p class="text-gray-400 text-center text-sm mb-8">Deep Learning Models</p>
+            <p class="text-gray-500 text-center text-xs mb-4">Prachi Shinde</p>
+            
+            <nav class="space-y-2">
+                <div onclick="showSection('home')" class="nav-item active" id="nav-home">
+                    <i class="fas fa-home"></i> Home
+                </div>
+                <div onclick="showSection('ann')" class="nav-item" id="nav-ann">
+                    <i class="fas fa-calculator"></i> Experiment No 2 - ANN (Digit)
+                </div>
+                <div onclick="showSection('cnn')" class="nav-item" id="nav-cnn">
+                    <i class="fas fa-paw"></i> Experiment No 3 - CNN (Cat/Dog)
+                </div>
+                <div onclick="showSection('emotion')" class="nav-item" id="nav-emotion">
+                    <i class="fas fa-smile"></i> Experiment No 4 - Emotion
+                </div>
+                <div onclick="showSection('sentiment')" class="nav-item" id="nav-sentiment">
+                    <i class="fas fa-heart"></i> Experiment No 5 - Sentiment
+                </div>
+                <div onclick="showSection('translate')" class="nav-item" id="nav-translate">
+                    <i class="fas fa-language"></i> Experiment No 6 - Translate
+                </div>
+                <div onclick="showSection('caption')" class="nav-item" id="nav-caption">
+                    <i class="fas fa-camera"></i> Experiment No 7 - Image Caption
+                </div>
+                <div onclick="showSection('lstm')" class="nav-item" id="nav-lstm">
+                    <i class="fas fa-brain"></i> Experiment No 8 - LSTM (Next Word)
+                </div>
+                <div onclick="showSection('gru')" class="nav-item" id="nav-gru">
+                    <i class="fas fa-project-diagram"></i> Experiment No 9 - GRU (Text Generation)
+                </div>
+                <div onclick="showSection('pos')" class="nav-item" id="nav-pos">
+                    <i class="fas fa-tags"></i> Experiment No 10 - POS Tagging
+                </div>
+            </nav>
+            
+            <div class="mt-8 pt-6 border-t border-gray-700">
+                <p class="text-xs text-gray-500 text-center">All Models Loaded ✅</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-6">
+            <!-- HOME SECTION -->
+            <div id="section-home" class="section">
+                <div class="text-center py-12">
+                    <h1 class="text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                        Welcome to DL Experiment Project
+                    </h1>
+                    <p class="text-xl text-gray-300 mb-8">Experience the power of Deep Learning</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                        <div class="model-card p-6">
+                            <i class="fas fa-calculator text-4xl text-indigo-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">ANN</h3>
+                            <p class="text-gray-400">Digit Recognition</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-paw text-4xl text-green-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">CNN</h3>
+                            <p class="text-gray-400">Image Classification</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-smile text-4xl text-yellow-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">Emotion</h3>
+                            <p class="text-gray-400">Face Detection</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-heart text-4xl text-pink-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">Sentiment</h3>
+                            <p class="text-gray-400">Text Analysis</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-language text-4xl text-blue-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">Translate</h3>
+                            <p class="text-gray-400">EN → FR</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-camera text-4xl text-purple-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">Caption</h3>
+                            <p class="text-gray-400">Image Description</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-brain text-4xl text-orange-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">LSTM</h3>
+                            <p class="text-gray-400">Next Word Prediction</p>
+                        </div>
+                        <div class="model-card p-6">
+                            <i class="fas fa-project-diagram text-4xl text-teal-400 mb-4"></i>
+                            <h3 class="text-xl font-semibold">GRU</h3>
+                            <p class="text-gray-400">Text Generation</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANN SECTION -->
+            <div id="section-ann" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-calculator text-indigo-400"></i> ANN - Digit Recognition</h2>
+                    <p class="text-gray-400 mb-6">Draw a digit (0-9) on the canvas below</p>
+                    
+                    <div class="model-card p-6">
+                        <canvas id="canvas" width="280" height="280" class="border-2 border-gray-600 rounded-lg mx-auto bg-black cursor-crosshair"></canvas>
+                        
+                        <div class="flex justify-center gap-4 mt-6">
+                            <button onclick="clearCanvas()" class="btn-secondary">
+                                <i class="fas fa-eraser"></i> Clear
+                            </button>
+                            <button onclick="predictDigit()" class="btn-primary">
+                                <i class="fas fa-brain"></i> Predict
+                            </button>
+                        </div>
+                        
+                        <div id="ann-result" class="result-box">
+                            <p class="text-lg"><strong>Prediction:</strong> <span id="ann-prediction" class="text-2xl font-bold text-indigo-400"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CNN SECTION -->
+            <div id="section-cnn" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-paw text-green-400"></i> CNN - Cat/Dog Classification</h2>
+                    <p class="text-gray-400 mb-6">Upload an image to classify as Cat or Dog</p>
+                    
+                    <div class="model-card p-6">
+                        <div class="upload-area" id="cnn-upload-area" onclick="document.getElementById('cnn-input').click()">
+                            <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 mb-4"></i>
+                            <p class="text-lg">Click or Drag & Drop Image</p>
+                            <p class="text-sm text-gray-500">Supports: JPG, PNG</p>
+                        </div>
+                        <input type="file" id="cnn-input" class="hidden" accept="image/*" onchange="previewImage(this, 'cnn-preview')">
+                        
+                        <img id="cnn-preview" class="preview-image" alt="Preview">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="predictCNN()" class="btn-primary">
+                                <i class="fas fa-search"></i> Classify
+                            </button>
+                        </div>
+                        
+                        <div id="cnn-result" class="result-box">
+                            <p class="text-lg"><strong>Result:</strong> <span id="cnn-prediction" class="text-2xl font-bold text-green-400"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMOTION SECTION -->
+            <div id="section-emotion" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-smile text-yellow-400"></i> Emotion Detection</h2>
+                    <p class="text-gray-400 mb-6">Upload a face image to detect emotion</p>
+                    
+                    <div class="model-card p-6">
+                        <div class="upload-area" id="emotion-upload-area" onclick="document.getElementById('emotion-input').click()">
+                            <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 mb-4"></i>
+                            <p class="text-lg">Click or Drag & Drop Face Image</p>
+                            <p class="text-sm text-gray-500">Supports: JPG, PNG</p>
+                        </div>
+                        <input type="file" id="emotion-input" class="hidden" accept="image/*" onchange="previewImage(this, 'emotion-preview')">
+                        
+                        <img id="emotion-preview" class="preview-image" alt="Preview">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="predictEmotion()" class="btn-primary">
+                                <i class="fas fa-search"></i> Detect Emotion
+                            </button>
+                        </div>
+                        
+                        <div id="emotion-result" class="result-box">
+                            <p class="text-lg"><strong>Detected Emotion:</strong> <span id="emotion-prediction" class="text-2xl font-bold text-yellow-400"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SENTIMENT SECTION -->
+            <div id="section-sentiment" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-heart text-pink-400"></i> Sentiment Analysis</h2>
+                    <p class="text-gray-400 mb-6">Enter text to analyze its sentiment</p>
+                    
+                    <div class="model-card p-6">
+                        <textarea id="sentiment-text" rows="4" placeholder="Enter your text here..."></textarea>
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="predictSentiment()" class="btn-primary">
+                                <i class="fas fa-search"></i> Analyze
+                            </button>
+                        </div>
+                        
+                        <div id="sentiment-result" class="result-box">
+                            <p class="text-lg"><strong>Sentiment:</strong> <span id="sentiment-prediction" class="text-2xl font-bold text-pink-400"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRANSLATE SECTION -->
+            <div id="section-translate" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-language text-blue-400"></i> Translation (EN → FR)</h2>
+                    <p class="text-gray-400 mb-6">Enter English text to translate to French</p>
+                    
+                    <div class="model-card p-6">
+                        <input type="text" id="translate-input" placeholder="Enter English text...">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="translateText()" class="btn-primary">
+                                <i class="fas fa-globe"></i> Translate
+                            </button>
+                        </div>
+                        
+                        <div id="translate-result" class="result-box">
+                            <p class="text-lg"><strong>French Translation:</strong></p>
+                            <p id="translate-prediction" class="text-xl text-blue-400 mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAPTION SECTION -->
+            <div id="section-caption" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-camera text-purple-400"></i> Image Captioning</h2>
+                    <p class="text-gray-400 mb-6">Upload an image to generate a description</p>
+                    
+                    <div class="model-card p-6">
+                        <div class="upload-area" id="caption-upload-area" onclick="document.getElementById('caption-input').click()">
+                            <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 mb-4"></i>
+                            <p class="text-lg">Click or Drag & Drop Image</p>
+                            <p class="text-sm text-gray-500">Supports: JPG, PNG</p>
+                        </div>
+                        <input type="file" id="caption-input" class="hidden" accept="image/*" onchange="previewImage(this, 'caption-preview')">
+                        
+                        <img id="caption-preview" class="preview-image" alt="Preview">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="generateCaption()" class="btn-primary">
+                                <i class="fas fa-magic"></i> Generate Caption
+                            </button>
+                        </div>
+                        
+                        <div id="caption-result" class="result-box">
+                            <p class="text-lg"><strong>Caption:</strong></p>
+                            <p id="caption-prediction" class="text-xl text-purple-400 mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LSTM SECTION -->
+            <div id="section-lstm" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-brain text-orange-400"></i> LSTM - Next Word Prediction</h2>
+                    <p class="text-gray-400 mb-6">Enter text to predict the next word using LSTM</p>
+                    
+                    <div class="model-card p-6">
+                        <input type="text" id="lstm-input" placeholder="Enter text here...">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="predictNextWord()" class="btn-primary">
+                                <i class="fas fa-magic"></i> Predict Next Word
+                            </button>
+                        </div>
+                        
+                        <div id="lstm-result" class="result-box">
+                            <p class="text-lg"><strong>Predicted Words:</strong></p>
+                            <div id="lstm-predictions" class="text-xl text-orange-400 mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRU SECTION -->
+            <div id="section-gru" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-project-diagram text-teal-400"></i> GRU - Text Generation</h2>
+                    <p class="text-gray-400 mb-6">Enter text to generate continuation using GRU</p>
+                    
+                    <div class="model-card p-6">
+                        <input type="text" id="gru-input" placeholder="Enter text here...">
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="generateText()" class="btn-primary">
+                                <i class="fas fa-magic"></i> Generate Text
+                            </button>
+                        </div>
+                        
+                        <div id="gru-result" class="result-box">
+                            <p class="text-lg"><strong>Generated Text:</strong></p>
+                            <p id="gru-prediction" class="text-xl text-teal-400 mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POS TAGGING SECTION -->
+            <div id="section-pos" class="section hidden">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2"><i class="fas fa-tags text-red-400"></i> POS Tagging</h2>
+                    <p class="text-gray-400 mb-2">Analyze Part-of-Speech tags using spaCy's English model</p>
+                    
+                    <div class="model-card p-6">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold mb-2">Example Text:</h3>
+                            <textarea id="pos-example" rows="2" class="bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm" readonly>The quick brown fox jumps over the lazy dog</textarea>
+                            <button onclick="loadExample()" class="btn-secondary text-sm">
+                                <i class="fas fa-copy"></i> Load Example
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold mb-2">Enter Your Text:</h3>
+                            <textarea id="pos-input" rows="4" placeholder="Enter your text here for POS analysis..."></textarea>
+                        </div>
+                        
+                        <div class="flex justify-center mt-6">
+                            <button onclick="performPOSTagging()" class="btn-primary">
+                                <i class="fas fa-tags"></i> Analyze POS
+                            </button>
+                        </div>
+                        
+                        <div id="pos-result" class="result-box">
+                            <p class="text-lg"><strong>POS Tags:</strong></p>
+                            <div id="pos-tags" class="mt-2 space-y-2">
+                                <!-- POS tags will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 bg-gray-800 bg-opacity-50 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold mb-3">POS Tag Legend:</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-blue-400 rounded-full"></span>
+                                <span class="text-blue-400">Noun</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-green-400 rounded-full"></span>
+                                <span class="text-green-400">Verb</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-yellow-400 rounded-full"></span>
+                                <span class="text-yellow-400">Adjective</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-purple-400 rounded-full"></span>
+                                <span class="text-purple-400">Adverb</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-pink-400 rounded-full"></span>
+                                <span class="text-pink-400">Pronoun</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-orange-400 rounded-full"></span>
+                                <span class="text-orange-400">Preposition</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-cyan-400 rounded-full"></span>
+                                <span class="text-cyan-400">Conjunction</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-3 h-3 bg-red-400 rounded-full"></span>
+                                <span class="text-red-400">Punctuation</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 text-sm text-gray-400">
+                            <p class="mb-2"><strong>What is POS Tagging?</strong></p>
+                            <p class="mb-2">Part-of-Speech (POS) tagging identifies grammatical categories of words in text. It helps understand sentence structure and word relationships.</p>
+                            <p class="mb-2"><strong>Common POS Tags:</strong></p>
+                            <ul class="list-disc list-inside space-y-1 text-gray-300">
+                                <li><span class="text-blue-400">Nouns</span>: People, places, things (dog, table, happiness)</li>
+                                <li><span class="text-green-400">Verbs</span>: Actions, states (runs, jumps, thinks, is)</li>
+                                <li><span class="text-yellow-400">Adjectives</span>: Descriptions (quick, brown, lazy, beautiful)</li>
+                                <li><span class="text-purple-400">Adverbs</span>: Modifiers (quickly, over, gracefully)</li>
+                                <li><span class="text-pink-400">Pronouns</span>: Replace nouns (he, she, it, they)</li>
+                                <li><span class="text-orange-400">Prepositions</span>: Relationships (over, under, with, to)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Navigation
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('section-' + id).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('nav-' + id).classList.add('active');
+        }
+
+        // Loader
+        function showLoader() {
+            document.getElementById('loader').classList.remove('hidden');
+        }
+        function hideLoader() {
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        // Image Preview
+        function previewImage(input, previewId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(previewId);
+                    preview.src = e.target.result;
+                    preview.classList.add('visible');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Drag and Drop
+        function setupDragDrop(uploadAreaId, inputId) {
+            const area = document.getElementById(uploadAreaId);
+            const input = document.getElementById(inputId);
+            
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+            
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                input.files = e.dataTransfer.files;
+                const event = { target: { files: e.dataTransfer.files } };
+                previewImage(event.target, inputId.replace('-input', '-preview'));
+            });
+        }
+
+        setupDragDrop('cnn-upload-area', 'cnn-input');
+        setupDragDrop('emotion-upload-area', 'emotion-input');
+        setupDragDrop('caption-upload-area', 'caption-input');
+
+        // ANN Canvas
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, 280, 280);
+
+        canvas.addEventListener('mousedown', () => { drawing = true; });
+        canvas.addEventListener('mouseup', () => { drawing = false; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing) {
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(e.offsetX, e.offsetY, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
+        function clearCanvas() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 280, 280);
+            document.getElementById('ann-result').classList.remove('visible');
+        }
+
+        function predictDigit() {
+            showLoader();
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            fetch('/predict_ann', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('ann-prediction').textContent = d.prediction;
+                document.getElementById('ann-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // CNN Prediction
+        function predictCNN() {
+            const input = document.getElementById('cnn-input');
+            if (!input.files[0]) {
+                alert('Please select an image first');
+                return;
+            }
+            
+            showLoader();
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            
+            fetch('/predict_cnn', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('cnn-prediction').textContent = d.prediction;
+                document.getElementById('cnn-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // Emotion Prediction
+        function predictEmotion() {
+            const input = document.getElementById('emotion-input');
+            if (!input.files[0]) {
+                alert('Please select an image first');
+                return;
+            }
+            
+            showLoader();
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            
+            fetch('/predict_emotion', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('emotion-prediction').textContent = d.prediction;
+                document.getElementById('emotion-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // Sentiment Prediction
+        function predictSentiment() {
+            const text = document.getElementById('sentiment-text').value;
+            if (!text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            showLoader();
+            fetch('/predict_sentiment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('sentiment-prediction').textContent = d.prediction;
+                document.getElementById('sentiment-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // Translate
+        function translateText() {
+            const text = document.getElementById('translate-input').value;
+            if (!text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            showLoader();
+            fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('translate-prediction').textContent = d.translation;
+                document.getElementById('translate-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // POS Tagging
+        function loadExample() {
+            const exampleText = "The quick brown fox jumps over the lazy dog";
+            document.getElementById('pos-input').value = exampleText;
+        }
+
+        function performPOSTagging() {
+            const text = document.getElementById('pos-input').value;
+            if (!text.trim()) {
+                alert('Please enter some text for POS analysis');
+                return;
+            }
+            
+            showLoader();
+            fetch('/pos_tag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(r => r.json())
+            .then(d => {
+                const posTagsDiv = document.getElementById('pos-tags');
+                posTagsDiv.innerHTML = '';
+                
+                if (d.pos_tags && d.pos_tags.length > 0) {
+                    d.pos_tags.forEach(tag => {
+                        const tagElement = document.createElement('div');
+                        tagElement.className = 'bg-gray-800 rounded-lg p-3 mb-2 text-sm';
+                        
+                        // Map POS tags to readable names
+                        const posNames = {
+                            'NOUN': 'noun',
+                            'VERB': 'verb',
+                            'ADJ': 'adjective',
+                            'ADV': 'adverb',
+                            'PRON': 'pronoun',
+                            'DET': 'determiner',
+                            'ADP': 'preposition',
+                            'CONJ': 'conjunction',
+                            'NUM': 'number',
+                            'PUNCT': 'punctuation'
+                        };
+                        
+                        const posName = posNames[tag.pos] || tag.pos;
+                        const posColor = {
+                            'noun': 'text-blue-400',
+                            'verb': 'text-green-400',
+                            'adjective': 'text-yellow-400',
+                            'adverb': 'text-purple-400',
+                            'pronoun': 'text-pink-400',
+                            'determiner': 'text-orange-400',
+                            'preposition': 'text-cyan-400',
+                            'conjunction': 'text-red-400',
+                            'number': 'text-indigo-400',
+                            'punctuation': 'text-gray-400'
+                        };
+                        
+                        tagElement.innerHTML = `
+                            <span class="font-semibold text-white">${tag.text}</span>
+                            <span class="text-sm ${posColor[posName] || 'text-gray-400'}">[${posName}]</span>
+                            <span class="text-xs text-gray-500">(${tag.tag})</span>
+                            <span class="text-xs text-purple-400">lemma: ${tag.lemma}</span>
+                        `;
+                        posTagsDiv.appendChild(tagElement);
+                    });
+                } else if (d.error) {
+                    posTagsDiv.innerHTML = `<p class="text-red-400">Error: ${d.error}</p>`;
+                }
+                
+                document.getElementById('pos-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // LSTM Next Word Prediction
+        function predictNextWord() {
+            const text = document.getElementById('lstm-input').value;
+            if (!text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            showLoader();
+            fetch('/predict_next_word', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(r => r.json())
+            .then(d => {
+                const predictionsDiv = document.getElementById('lstm-predictions');
+                predictionsDiv.innerHTML = d.predictions.map(word => 
+                    `<span class="inline-block bg-orange-500 bg-opacity-20 border border-orange-400 rounded-lg px-3 py-1 m-1 text-orange-300">${word}</span>`
+                ).join('');
+                document.getElementById('lstm-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // GRU Text Generation
+        function generateText() {
+            const text = document.getElementById('gru-input').value;
+            if (!text.trim()) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            showLoader();
+            fetch('/generate_text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('gru-prediction').textContent = d.generated_text;
+                document.getElementById('gru-result').classList.add('visible');
+                hideLoader();
+            })
+            .catch(err => {
+                hideLoader();
+                alert('Error: ' + err);
+            });
+        }
+
+        // Voice Over System Functions
+        let currentAudio = null;
+
+        const experimentExplanations = {
+            'ann': "Welcome to Experiment 2 - Artificial Neural Network for Digit Recognition. This experiment uses a simple feedforward neural network with one hidden layer to classify handwritten digits from the MNIST dataset. The network takes a 28x28 pixel image as input and outputs probabilities for digits 0 through 9. The model is trained using the Adam optimizer and categorical cross-entropy loss function.",
+            
+            'cnn': "Experiment 3 - Convolutional Neural Network for Image Classification. This experiment uses MobileNetV2, a pre-trained CNN architecture designed for efficient mobile deployment. It can classify images into different categories, specifically trained to distinguish between cats and dogs. The network uses depthwise separable convolutions to reduce computational cost while maintaining accuracy.",
+            
+            'emotion': "Experiment 4 - Emotion Detection using Deep Learning. This experiment uses facial recognition technology to detect human emotions from images. The system analyzes facial features like eye movement, mouth position, and facial expressions to classify emotions such as happiness, sadness, anger, fear, surprise, and neutral. It demonstrates how neural networks can understand human emotional states.",
+            
+            'sentiment': "Experiment 5 - Sentiment Analysis with Transformers. This experiment uses a pre-trained transformer model to analyze text and determine whether the sentiment is positive, negative, or neutral. The model processes the text through attention mechanisms to understand context and relationships between words, providing insights into the emotional tone of written content.",
+            
+            'translate': "Experiment 6 - Language Translation using Neural Networks. This experiment demonstrates machine translation capabilities, converting English text to French. While currently in mock mode, it shows the architecture of translation systems that use encoder-decoder networks with attention mechanisms to map between different languages.",
+            
+            'caption': "Experiment 7 - Image Captioning with Deep Learning. This experiment combines computer vision and natural language processing to generate descriptive captions for images. The system uses an encoder to understand visual features and a decoder to generate human-readable descriptions, bridging the gap between pixels and language.",
+            
+            'lstm': "Experiment 8 - Long Short-Term Memory Networks. This experiment demonstrates sequential data processing using LSTM architecture. The network learns patterns in text sequences to predict the next most likely word, showing how neural networks can understand and generate human language through memory cells and gates.",
+            
+            'gru': "Experiment 9 - Gated Recurrent Unit Networks. This experiment uses GRU architecture for text generation tasks. GRUs are simplified versions of LSTMs with fewer parameters, making them computationally efficient while maintaining the ability to capture long-term dependencies in sequential data.",
+            
+            'pos': "Experiment 10 - Part-of-Speech Tagging with spaCy. This experiment uses advanced natural language processing to identify grammatical categories of words in text. The system analyzes word context and relationships to determine whether words function as nouns, verbs, adjectives, or other parts of speech, enabling deeper understanding of sentence structure."
+        };
+
+        function toggleVoiceOver() {
+            const voiceOver = document.getElementById('voice-over');
+            if (voiceOver.style.display === 'none' || voiceOver.style.display === '') {
+                voiceOver.style.display = 'block';
+            } else {
+                voiceOver.style.display = 'none';
+                stopExplanation();
+            }
+        }
+
+        function playExplanation() {
+            const select = document.getElementById('experiment-select');
+            const experiment = select.value;
+            
+            if (!experiment) {
+                alert('Please select an experiment first');
+                return;
+            }
+            
+            stopExplanation();
+            
+            const explanation = experimentExplanations[experiment];
+            if (!explanation) {
+                alert('No explanation available for this experiment');
+                return;
+            }
+            
+            // Generate speech using Web Speech API
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(explanation);
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.8;
+                
+                currentAudio = utterance;
+                speechSynthesis.speak(utterance);
+                
+                // Show visual indicator
+                const audioElement = document.getElementById('voice-audio');
+                audioElement.style.display = 'block';
+                audioElement.innerHTML = '<i class="fas fa-volume-up animate-pulse"></i> Playing explanation...';
+                
+                // Auto-hide after 5 minutes
+                setTimeout(() => {
+                    stopExplanation();
+                }, 300000); // 5 minutes in milliseconds
+            } else {
+                alert('Speech synthesis not supported in your browser');
+            }
+        }
+
+        function stopExplanation() {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
+            
+            const audioElement = document.getElementById('voice-audio');
+            audioElement.style.display = 'none';
+            currentAudio = null;
+        }
+    </script>
+    
+    <!-- Voice Over System -->
+    <div id="voice-over" class="fixed top-4 right-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded-lg shadow-xl max-w-sm z-50">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold">Experiment Guide</h3>
+            <button onclick="toggleVoiceOver()" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="mb-3">
+            <label class="block text-sm font-medium mb-2">Select Experiment:</label>
+            <select id="experiment-select" onchange="playExplanation()" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white">
+                <option value="">Choose Experiment</option>
+                <option value="ann">Experiment 2 - ANN</option>
+                <option value="cnn">Experiment 3 - CNN</option>
+                <option value="emotion">Experiment 4 - Emotion</option>
+                <option value="sentiment">Experiment 5 - Sentiment</option>
+                <option value="translate">Experiment 6 - Translate</option>
+                <option value="caption">Experiment 7 - Image Caption</option>
+                <option value="lstm">Experiment 8 - LSTM</option>
+                <option value="gru">Experiment 9 - GRU</option>
+                <option value="pos">Experiment 10 - POS Tagging</option>
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <button onclick="playExplanation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
+                <i class="fas fa-play mr-2"></i> Play 5-Minute Explanation
+            </button>
+        </div>
+        
+        <div class="mb-3">
+            <button onclick="stopExplanation()" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md">
+                <i class="fas fa-stop mr-2"></i> Stop Explanation
+            </button>
+        </div>
+        
+        <div class="text-xs text-gray-400">
+            <p>Duration: ~5 minutes per experiment</p>
+            <p>Auto-generated voice explanations</p>
+        </div>
+    </div>
+
+    <!-- Audio Element -->
+    <audio id="voice-audio" class="hidden"></audio>
+    
+    <!-- Footer -->
+</body>
+</html>
